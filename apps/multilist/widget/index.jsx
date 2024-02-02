@@ -110,7 +110,9 @@ return (
         </a>
       </div>
     </Header>
-    {currentTab === "list" && <Widget src="baam25.near/widget/list" />}
-    {currentTab === "explore" && <Widget src="baam25.near/widget/explore" />}
+    {currentTab === "list" && <Widget src="bos.yearofchef.near/widget/list" />}
+    {currentTab === "explore" && (
+      <Widget src="bos.yearofchef.near/widget/explore" />
+    )}
   </Container>
 );

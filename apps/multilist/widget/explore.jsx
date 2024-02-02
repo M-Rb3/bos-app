@@ -137,7 +137,18 @@ const Pagination = styled.div`
     }
   }
 `;
+const Total = styled.div`
+  font-size: 20px;
+  margin: 1rem;
+  span {
+    color: #ec2109;
+    font-weight: 600;
+  }
+`;
+
+// Paginaton
 const perPage = 50;
+// list of pages
 const paginations = [...Array(parseInt(nfts?.length / perPage) + 1).keys()];
 
 let lastElement = paginations[paginations.length - 1];
@@ -160,16 +171,6 @@ const Page = ({ children }) => {
   );
 };
 const Number = () => {
-  // return (
-  //   <Pagination>
-  //     {page === 0 && <Page>0</Page>}
-  //     {page > 1 && <Page>{page - 1}</Page>}
-  //     {page > 0 && lastElement > page && <Page>{page}</Page>}
-  //     {lastElement > page && <Page>{page + 1}</Page>}
-  //     {lastElement > page + 3 && <Page>...</Page>}
-  //     {lastElement !== page && <Page>{lastElement}</Page>}
-  //   </Pagination>
-  // );
   console.log(page);
   console.log("lastElement", lastElement);
   if (page === 0) {
@@ -227,6 +228,9 @@ const Number = () => {
 
 return nfts.length > 0 ? (
   <>
+    <Total>
+      Total: <span>{nfts.length}</span>
+    </Total>
     <div className="d-flex gap-4 flex-wrap">
       {nfts.slice(page * perPage, (page + 1) * perPage).map((nft) => {
         // let priceYocto = 0;
@@ -258,44 +262,11 @@ return nfts.length > 0 ? (
                 {!nft.listed && <div className="listed">not listed</div>}
               </div>
             </NFTcard>
-            {/* {!nft.listed && (
-              <button
-                disabled={!accountId}
-                onClick={() => {
-                  if (!accountId) return;
-                  buy(priceYocto, listing.token_id, listing.nft_contract_id);
-                }}
-                className="btn-main"
-                style={{
-                  width: "100%",
-                  textAlign: "cetner",
-                }}
-              >
-                Buy {priceNear} N
-              </button>
-            )} */}
           </div>
         );
       })}
     </div>
-    {
-      <Number />
-      // <Pagination>
-      //   {/* <Page>0</Page>
-      //   <Page>1</Page>
-      //   <Page>2</Page>
-      //   <Page>...</Page>
-      //   <Page>{lastElement - 1}</Page>
-      //   <Page>{lastElement}</Page> */}
-      //   {page === 0 ? <Page>0</Page> : ""}
-      //   {/* {page > 1 && <Page>{page - 1}</Page>} */}
-      //   {/* {page > 0 && <Page>{page}</Page>} */}
-      //   {/* {lastElement > page && <Page>{page + 1}</Page>} */}
-      //   {/* {lastElement > page + 3 && <Page>...</Page>} */}
-      //   {lastElement !== page && <Page>{lastElement}</Page>}
-      // </Pagination>
-    }
-    {/* <Number /> */}
+    {<Number />}
   </>
 ) : (
   <p>loading...</p>
