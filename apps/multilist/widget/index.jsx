@@ -60,6 +60,7 @@ const Container = styled.div`
   .tabs {
     display: flex;
     gap: 1rem;
+    margin-left: 1rem;
   }
 `;
 const Header = styled.div`

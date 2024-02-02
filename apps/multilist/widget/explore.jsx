@@ -12,54 +12,49 @@ const data = fetch("https://graph.mintbase.xyz", {
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    query: `query GetStoreNfts( 
-      $offset: Int = 0 $condition: mb_views_nft_metadata_unburned_bool_exp ) 
-      @cached 
-      { mb_views_nft_metadata_unburned( where: $condition 
-        offset: $offset order_by: { title: asc } ) 
-       { createdAt: minted_timestamp 
-         listed: price 
-         media 
-         storeId: nft_contract_id 
-         metadataId: metadata_id 
-         title base_uri 
-         description
-         title
-       } 
-      mb_views_nft_metadata_unburned_aggregate(where: $condition) 
-      { 
-        aggregate { 
-          count 
-        } 
-       } 
-     }
+    query: `query MyQuery {
+      mb_views_nft_tokens(
+        where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}
+        order_by: {token_id: asc}
+      ) {
+        token_id
+        title
+        owner
+        media
+        metadata_id
+        listings {
+          price
+        }
+      }
+      mb_views_nft_owned_tokens_aggregate(
+        distinct_on: owner
+        where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}
+      ) {
+        aggregate {
+          count(distinct: true)
+        }
+      }
+    }
+    
   `,
-    variables: {
-      condition: {
-        nft_contract_id: {
-          _in: contract,
-        },
-      },
-    },
   }),
 });
-const nfts = data?.body?.data?.mb_views_nft_metadata_unburned;
-
+const nfts = data?.body?.data?.mb_views_nft_tokens;
+const owners =
+  data?.body?.data?.mb_views_nft_owned_tokens_aggregate?.aggregate.count;
 const YoctoToNear = (amountYocto) => {
   return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
 };
 
-let buy = (price, token_id, nft_contract_id) => {
+let buy = (price, token_id) => {
   const gas = 200000000000000;
   const deposit = new Big(price).toFixed(0);
-
   Near.call(
     marketId,
     "buy",
     {
-      nft_contract_id: nft_contract_id,
+      nft_contract_id: contract,
       token_id: token_id,
-      referrer_id: AFFILIATE_ACCOUNT,
     },
     gas,
     deposit
@@ -82,6 +77,7 @@ const NFTcard = styled.a`
   cursor: pointer;
   overflow: hidden;
   text-decoration: none;
+  height: 100%;
   :hover {
     box-shadow: 0px 0px 20px #ec20096b;
     text-decoration: none;
@@ -113,6 +109,12 @@ const NFTcard = styled.a`
     color: #6c757d;
     margin-left: auto;
   }
+  .price {
+    font-size: 12px;
+    color: #ec2109;
+    margin-left: auto;
+    font-weight: bold;
+  }
 `;
 
 const Pagination = styled.div`
@@ -137,10 +139,21 @@ const Pagination = styled.div`
     }
   }
 `;
+const Stats = styled.div`
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  .vertical-line {
+    width: 2px;
+    height: 100%;
+    background: rgb(236, 33, 9);
+  }
+`;
 const Total = styled.div`
   font-size: 20px;
-  margin: 1rem;
-  span {
+  flex-direction: column;
+  text-align: center;
+  div:last-child {
     color: #ec2109;
     font-weight: 600;
   }
@@ -158,9 +171,6 @@ const handlePainate = (to) => {
   }
 };
 const Page = ({ children }) => {
-  console.log("page", page);
-  console.log("children", children);
-
   return (
     <div
       onClick={() => handlePainate(children[0])}
@@ -171,8 +181,6 @@ const Page = ({ children }) => {
   );
 };
 const Number = () => {
-  console.log(page);
-  console.log("lastElement", lastElement);
   if (page === 0) {
     return (
       <Pagination>
@@ -228,23 +236,29 @@ const Number = () => {
 
 return nfts.length > 0 ? (
   <>
-    <Total>
-      Total: <span>{nfts.length}</span>
-    </Total>
+    <Stats>
+      <Total>
+        <div> Total</div> <div>{nfts.length}</div>
+      </Total>
+      <div className="vertical-line" />
+      <Total>
+        <div> Owners</div> <div>{owners}</div>
+      </Total>
+    </Stats>
     <div className="d-flex gap-4 flex-wrap">
       {nfts.slice(page * perPage, (page + 1) * perPage).map((nft) => {
-        // let priceYocto = 0;
-        // if (nft.listed) {
-        //   priceYocto = nft.listed
-        //     .toLocaleString()
-        //     .replace(/,/g, "")
-        //     .replace(/\s/g, "");
-        // }
-        // const priceNear = YoctoToNear(priceYocto);
+        let priceYocto = nft.listings[0].price;
+        if (priceYocto) {
+          priceYocto = priceYocto
+            .toLocaleString()
+            .replace(/,/g, "")
+            .replace(/\s/g, "");
+        }
+        const priceNear = YoctoToNear(priceYocto);
         return (
           <div className="d-flex flex-column wrap gap-1 w-15 p-3">
             <NFTcard
-              href={`https://mintbase.xyz/meta/${nft.metadataId.replace(
+              href={`https://mintbase.xyz/meta/${nft.metadata_id.replace(
                 ":",
                 "%3A"
               )}`}
@@ -259,7 +273,24 @@ return nfts.length > 0 ? (
               />
               <div className="desc">
                 <div className="tile">{nft.title}</div>
-                {!nft.listed && <div className="listed">not listed</div>}
+                {!priceYocto && <div className="listed">not listed</div>}
+                {priceYocto && (
+                  <button
+                    disabled={!accountId}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (!accountId) return;
+                      buy(priceYocto, nft.token_id);
+                    }}
+                    className="btn-main"
+                    style={{
+                      width: "100%",
+                      textAlign: "cetner",
+                    }}
+                  >
+                    Buy {priceNear} N
+                  </button>
+                )}
               </div>
             </NFTcard>
           </div>
