@@ -2,8 +2,8 @@ const { theme } = props;
 const [page, setPage] = useState(0);
 const loggedIn = context.accountId ? props.loggedIn ?? false : false;
 const accountId = loggedIn
-  ? context.accountId ?? "ndcplug.near"
-  : props.accountId ?? "ndcplug.near";
+  ? context.accountId ?? "baam25.near"
+  : props.accountId ?? "baam25.near";
 const viewingOwnAccount = accountId === context.accountId;
 
 const AVAILABLE_THEMES = {
@@ -68,7 +68,21 @@ const Gallery = styled.div`
     border-radius: 50%;
     border: 1px solid black;
   }
+  .slider-display {
+    position: relative;
+    width: 49rem;
+    height: 15rem;
+    overflow: hidden;
+    @media only screen and (max-width: 927px) {
+      width: 32rem;
+    }
+    @media only screen and (max-width: 627px) {
+      width: 15rem;
+    }
+  }
   .slider-track {
+    transition: all 300ms ease;
+    position: absolute;
     display: flex;
     gap: 2rem;
     justify-content: center;
@@ -86,17 +100,10 @@ const Gallery = styled.div`
     }
   }
 `;
-const perPage = 3;
-// list of pages
-const paginations = [
-  ...Array(
-    parseInt(nfts?.length / perPage) + (nfts?.length % perPage > 0 ? 1 : 0)
-  ).keys(),
-];
 const size = "100%";
 
 const HandleUpSlide = () => {
-  if (page < paginations.length - 1) {
+  if (page < nfts.length - 1) {
     setPage(page + 1);
   } else {
     setPage(0);
@@ -106,9 +113,11 @@ const HandleDownSlide = () => {
   if (page > 0) {
     setPage(page - 1);
   } else {
-    setPage(paginations.length - 1);
+    setPage(nfts.length - 1);
   }
 };
+
+console.log(window);
 return (
   <>
     <Theme.Linktree>
@@ -202,32 +211,39 @@ return (
           onClick={HandleDownSlide}
           alt="angle left"
         />
-        <div className="slider-track">
-          {nfts?.slice(page * perPage, (page + 1) * perPage)?.map((nft) => (
-            <div key={nft.tokenId} className="nft-card">
-              <Widget
-                src="mob.near/widget/NftImage"
-                props={{
-                  nft: { tokenId: nft.tokenId, contractId: nft.contractId },
-                  style: {
-                    width: size,
-                    height: size,
-                    objectFit: "cover",
-                    minWidth: size,
-                    minHeight: size,
-                    maxWidth: size,
-                    maxHeight: size,
-                    overflowWrap: "break-word",
-                    borderRadius: "inherit",
-                  },
-                  className: "",
-                  fallbackUrl:
-                    "https://ipfs.near.social/ipfs/bafkreihdiy3ec4epkkx7wc4wevssruen6b7f3oep5ylicnpnyyqzayvcry",
-                  alt: `NFT ${nft.contractId} ${nft.tokenId}`,
-                }}
-              />
-            </div>
-          ))}
+        <div className="slider-display">
+          <div
+            className="slider-track"
+            style={{
+              transform: `translateX(-${17 * page}rem)`,
+            }}
+          >
+            {nfts?.map((nft) => (
+              <div key={nft.tokenId} className="nft-card">
+                <Widget
+                  src="mob.near/widget/NftImage"
+                  props={{
+                    nft: { tokenId: nft.tokenId, contractId: nft.contractId },
+                    style: {
+                      width: size,
+                      height: size,
+                      objectFit: "cover",
+                      minWidth: size,
+                      minHeight: size,
+                      maxWidth: size,
+                      maxHeight: size,
+                      overflowWrap: "break-word",
+                      borderRadius: "inherit",
+                    },
+                    className: "",
+                    fallbackUrl:
+                      "https://ipfs.near.social/ipfs/bafkreihdiy3ec4epkkx7wc4wevssruen6b7f3oep5ylicnpnyyqzayvcry",
+                    alt: `NFT ${nft.contractId} ${nft.tokenId}`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
         <img
           className="arrow-r"
