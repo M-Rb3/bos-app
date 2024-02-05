@@ -297,7 +297,7 @@ return nfts.length > 0 ? (
         );
       })}
     </div>
-    {<Number />}
+    <Number />
   </>
 ) : (
   <p>loading...</p>

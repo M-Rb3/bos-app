@@ -1,4 +1,4 @@
-const accountId = "butoy.near";
+const accountId = context.accountId;
 const counter = 2024;
 
 if (!accountId) {
