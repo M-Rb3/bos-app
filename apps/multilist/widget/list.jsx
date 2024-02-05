@@ -1,5 +1,5 @@
-const accountId = context.accountId;
-const counter = 2030;
+const accountId = "butoy.near";
+const counter = 2024;
 
 if (!accountId) {
   return "Please sign in with NEAR wallet";
@@ -28,9 +28,16 @@ const [state, setState] = useState({
   imageUrl: "",
   owner: "owner",
   description: "description",
+  markeSelect: {
+    Paras: false,
+    Mintbase: false,
+    Genadrop: false,
+    Tradeport: false,
+  },
 });
 
-const { marketToList, price, selectedNft, mintbaseMarketId } = state;
+const { marketToList, price, selectedNft, mintbaseMarketId, markeSelect } =
+  state;
 const contractId = "mint.yearofchef.near";
 const tokenId = selectedNft?.tokenId || "";
 
@@ -68,8 +75,6 @@ fetchMintbaseURL();
 const mintBaseLink = `https://www.mintbase.xyz/meta/${mintbaseMarketId}`;
 const parasLink = `https://paras.id/token/${contractId}::${tokenId}`;
 const tradeportLink = `https://www.tradeport.xyz/near/collection/${contractId}?tab=items&tokenId=${tokenId}`;
-
-console.log(mintBaseLink);
 
 // Price in YoctoNear
 const _price = (price) =>
@@ -109,108 +114,61 @@ const data = fetch("https://graph.mintbase.xyz", {
     `,
   }),
 });
-console.log(data);
 
 const nfts = data.body?.data?.mb_views_nft_owned_tokens;
 
+const defaultGas = 1e14; // 100 tGas
+const defaultDeposit = 1e22; // 0.01 near
+const storageDeposit = (contractName, gas, deposit) => ({
+  contractName: contractName,
+  methodName: "storage_deposit",
+  args: {
+    receiver_id: accountId,
+  },
+  gas: gas || defaultGas,
+  deposit: deposit || defaultDeposit,
+});
+const nfTApprove = (marketAddress, toggleMsg, gas, deposit) => ({
+  contractName: contractId,
+  // need to wrap first with near_deposit
+  methodName: "nft_approve",
+  args: {
+    token_id: tokenId,
+    account_id: marketAddress,
+    msg: toggleMsg ? msg() : trpMsg(),
+  },
+  gas: gas || defaultGas,
+  deposit: deposit || defaultDeposit,
+});
+
 const handleList = () => {
+  console.log();
+
   if (!selectedNft) return console.log("select nft to list");
   if (!parseFloat(price)) return console.log("enter a price");
-  // need to buffer serialize arguments, add helper functions with state arguments
-  const gas = 1e14; // 100 tGas
-  //   const deposit = 1; // exactly 1 yocto
-  const deposit = 1e22; // 0.01 near
-  const tokenId = selectedNft.tokenId;
-  const contractId = contractId;
   Near.call([
     // tradeport
-    {
-      contractName: tradeportmarket,
-      methodName: "storage_deposit",
-      args: {
-        receiver_id: accountId,
-      },
-      gas,
-      deposit: deposit,
-    },
-    {
-      contractName: contractId,
-      // need to wrap first with near_deposit
-      methodName: "nft_approve",
-      args: {
-        token_id: tokenId,
-        account_id: tradeportmarket,
-        msg: trpMsg(),
-      },
-      gas: gas,
-      deposit: deposit,
-    },
+    ...(markeSelect.Tradeport
+      ? [storageDeposit(tradeportmarket), nfTApprove(tradeportmarket, false)]
+      : []),
     // mintbasemarket
-    {
-      contractName: mintbasemarket,
-      methodName: "deposit_storage",
-      args: {
-        receiver_id: accountId,
-      },
-      gas,
-      deposit: deposit,
-    },
-    {
-      contractName: contractId,
-      // need to wrap first with near_deposit
-      methodName: "nft_approve",
-      args: {
-        token_id: tokenId,
-        account_id: mintbasemarket,
-        msg: msg(),
-      },
-      gas: gas,
-      deposit: 8e20, // may take this out
-    },
+    ...(markeSelect.Mintbase
+      ? [
+          storageDeposit(mintbasemarket),
+          nfTApprove(mintbasemarket, true, defaultGas, 8e20),
+        ]
+      : []),
     //genadropmarket
-    {
-      contractName: genadropmarket,
-      methodName: "deposit_storage",
-      args: {
-        receiver_id: accountId,
-      },
-      gas,
-      deposit: deposit,
-    },
-    {
-      contractName: contractId,
-      // need to wrap first with near_deposit
-      methodName: "nft_approve",
-      args: {
-        token_id: tokenId,
-        account_id: genadropmarket,
-        msg: msg(),
-      },
-      gas: gas,
-      deposit: deposit, // may take this out
-    },
+    ...(markeSelect.Genadrop
+      ? [storageDeposit(genadropmarket), nfTApprove(genadropmarket, true)]
+      : []),
     // parasmarket
-    {
-      contractName: parasmarket,
-      methodName: "storage_deposit",
-      args: {
-        receiver_id: accountId,
-      },
-      gas,
-      deposit: 859e19,
-    },
-    {
-      contractName: contractId,
-      // need to wrap first with near_deposit
-      methodName: "nft_approve",
-      args: {
-        token_id: tokenId,
-        account_id: parasmarket,
-        msg: trpMsg(), // need to add the variables and buffer seerailize
-      },
-      gas: gas,
-      deposit: 4e20, // may take this out
-    },
+    ...(markeSelect.Paras
+      ? [
+          storageDeposit(parasmarket, defaultGas, 859e19),
+          nfTApprove(parasmarket, false, defaultGas, 4e20),
+        ]
+      : []),
   ]);
 };
 
@@ -296,10 +254,20 @@ const MarketIcons = styled.div`
   display: flex;
   gap: 10px;
   div {
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
     display: flex;
     gap: 4px;
     align-items: center;
     font-family: Arial, sans-serif;
+    border: 1px solid transparent;
+    :hover {
+      border-color: #ec2109;
+    }
+    &.selected {
+      border-color: #ec2109;
+    }
   }
   img {
     width: 1rem;
@@ -309,7 +277,6 @@ const MarketIcons = styled.div`
 `;
 
 const size = "100%";
-console.log(title);
 return (
   <>
     {selectedNft && (
@@ -325,10 +292,28 @@ return (
           />
         </div>
         <Form>
-          <div className="label">List to</div>
+          <div className="label">Select marketplaces to list to</div>
           <MarketIcons>
             {Object.keys(marketIcons).map((market) => (
-              <div key={market}>
+              <div
+                key={market}
+                className={markeSelect[market] ? "selected" : ""}
+                onClick={() =>
+                  markeSelect[market]
+                    ? updateState({
+                        markeSelect: {
+                          ...markeSelect,
+                          [market]: false,
+                        },
+                      })
+                    : updateState({
+                        markeSelect: {
+                          ...markeSelect,
+                          [market]: true,
+                        },
+                      })
+                }
+              >
                 <img src={ipfsUrl(marketIcons[market])} alt={market} /> {market}
               </div>
             ))}
