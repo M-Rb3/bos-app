@@ -38,18 +38,38 @@ const data = fetch("https://graph.mintbase.xyz", {
           count(distinct: true)
         }
       }
+      nft_earnings(where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}) {
+        amount
+      }
+      nft_activities(where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}) {
+        kind
+        price
+        action_receiver
+        action_sender
+        timestamp
+        token_id
+        receipt_id
+      }
     }
-    
   `,
   }),
 });
 const nfts = data?.body?.data?.mb_views_nft_tokens;
+const nft_earnings = data?.body?.data?.nft_earnings;
+const nft_activities = data?.body?.data?.nft_activities;
+console.log(nft_activities);
 const owners =
   data?.body?.data?.mb_views_nft_owned_tokens_aggregate?.aggregate.count;
 const YoctoToNear = (amountYocto) => {
   return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
 };
-
+// GET Volume
+let volume = new Big(0);
+if (nft_earnings?.length) {
+  nft_earnings.forEach((nft) => {
+    volume = volume.plus(new Big(nft.amount));
+  });
+}
 let buy = (price, token_id) => {
   const gas = 200000000000000;
   const deposit = new Big(price).toFixed(0);
@@ -163,16 +183,14 @@ const Stats = styled.div`
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  .vertical-line {
-    width: 2px;
-    height: 100%;
-    background: var(--primary-color);
-  }
 `;
 const Total = styled.div`
-  font-size: 20px;
+  font-size: 16px;
   flex-direction: column;
   text-align: center;
+  padding: 10px;
+  border: 1px solid var(--primary-color);
+  border-radius: 6px;
   div:last-child {
     color: var(--primary-color);
     font-weight: 600;
@@ -276,9 +294,11 @@ return nfts.length > 0 ? (
       <Total>
         <div> Items</div> <div>{nfts.length}</div>
       </Total>
-      <div className="vertical-line" />
       <Total>
         <div> Total Owners</div> <div>{owners}</div>
+      </Total>
+      <Total>
+        <div> Volume</div> <div>{YoctoToNear(volume.toString())} NEAR</div>
       </Total>
     </Stats>
     <div className="d-flex gap-4 flex-wrap">
