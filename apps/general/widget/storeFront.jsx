@@ -2,12 +2,13 @@ const accountId = props.accountId || context.accountId;
 const store = props.store;
 const customStyle = props.customStyle || "";
 // Paginaton
-const perPage = props.perPage || 50;
+const perPage = props.perPage || 48;
 const AFFILIATE_ACCOUNT = props.affiliateAccount || "baam25.near";
 
 if (!store) return "pass storeId";
 
 const [page, setPage] = useState(0);
+const [filter, setFilter] = useState("Filter");
 
 const data = fetch("https://graph.mintbase.xyz", {
   method: "POST",
@@ -54,15 +55,53 @@ const data = fetch("https://graph.mintbase.xyz", {
   `,
   }),
 });
-const nfts = data?.body?.data?.mb_views_nft_tokens;
+let nfts = data?.body?.data?.mb_views_nft_tokens;
+
 const nft_earnings = data?.body?.data?.nft_earnings;
 const nft_activities = data?.body?.data?.nft_activities;
-console.log(nft_activities);
 const owners =
   data?.body?.data?.mb_views_nft_owned_tokens_aggregate?.aggregate.count;
+
 const YoctoToNear = (amountYocto) => {
   return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
 };
+console.log(nfts);
+// Filter
+switch (filter) {
+  case "name":
+    nfts.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+    break;
+  case "Price: Low To High":
+    nfts.sort((a, b) => {
+      const aPrice = a.listings[0].price;
+      const bPrice = b.listings[0].price;
+      if (aPrice === undefined && bPrice === undefined) {
+        return 0; // no change in order for null values
+      }
+      if (aPrice === undefined) {
+        return 1; // move object with null price to the end
+      }
+      if (bPrice === undefined) {
+        return -1; // move object with null price to the end
+      }
+      return aPrice - bPrice; // compare numeric values for non-null prices
+    });
+    break;
+  case "Price: High To Low":
+    nfts.sort((a, b) => {
+      const aPrice = a.listings[0].price || 0;
+      const bPrice = b.listings[0].price || 0;
+      return bPrice - aPrice;
+    });
+    break;
+  case "Owned by me":
+    nfts = nfts.filter((nft) => nft.owner === accountId);
+    break;
+  default:
+    break;
+}
 // GET Volume
 let volume = new Big(0);
 if (nft_earnings?.length) {
@@ -99,6 +138,12 @@ const Container = styled.div`
   .store {
     padding-left: 1rem;
   }
+  .card-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: space-between;
+  }
   ${customStyle}
 `;
 const NFTcard = styled.a`
@@ -114,7 +159,7 @@ const NFTcard = styled.a`
   text-decoration: none;
   height: 100%;
   :hover {
-    box-shadow: 0px 0px 20px var(--primary-light);
+    box-shadow: 0px 0px 30px var(--primary-light);
     text-decoration: none;
   }
   img {
@@ -157,32 +202,15 @@ const NFTcard = styled.a`
   }
 `;
 
-const Pagination = styled.div`
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  div {
-    border: 1px solid transparent;
-    background: var(--primary-color);
-    border-radius: 2px;
-    padding: 10px;
-    font-size: 12px;
-    color: white;
-    cursor: pointer;
-    :hover {
-      background: var(--primary-light);
-    }
-    &.active {
-      background: white;
-      color: var(--primary-color);
-      border-color: var(--primary-color);
-    }
-  }
-`;
 const Stats = styled.div`
   display: flex;
+  align-items: center;
   gap: 1rem;
   padding: 1rem;
+  .filter {
+    margin-left: auto;
+    position: relative;
+  }
 `;
 const Total = styled.div`
   font-size: 16px;
@@ -209,99 +237,77 @@ const Button = styled.button`
     color: white;
   }
 `;
-
-// list of pages
-const paginations = [
-  ...Array(
-    parseInt(nfts?.length / perPage) + (nfts?.length % perPage > 0 ? 1 : 0)
-  ).keys(),
+const Trigger = styled.div`
+  border: 2px solid var(--primary-color);
+  border-radius: 1rem;
+  padding: 10px 1rem;
+  img {
+    width: 12px;
+  }
+`;
+const stats = {
+  Items: nfts.length,
+  "Total Owners": owners,
+  Volume: YoctoToNear(volume.toString()) + "NEAR",
+};
+const filterItems = [
+  {
+    name: "Name",
+    onSelect: () => setFilter("Name"),
+  },
+  {
+    name: "Price: Low To High",
+    onSelect: () => setFilter("Price: Low To High"),
+  },
+  {
+    name: "Price: High To Low",
+    onSelect: () => setFilter("Price: High To Low"),
+  },
+  {
+    name: "Owned by me",
+    onSelect: () => setFilter("Owned by me"),
+  },
 ];
-
-let lastElement = paginations[paginations.length - 1];
-const handlePainate = (to) => {
-  if (to !== "...") {
-    setPage(parseInt(to));
-  }
-};
-const Page = ({ children }) => {
-  return (
-    <div
-      onClick={() => handlePainate(children[0])}
-      className={`${children[0] + "" == page + "" ? "active" : ""}`}
-    >
-      {children[0]}
-    </div>
-  );
-};
-const PaginationNumber = () => {
-  if (page === 0) {
-    return (
-      <Pagination>
-        <Page>0</Page>
-        <Page>{page + 1}</Page>
-        <Page>...</Page>
-        <Page>{lastElement}</Page>
-      </Pagination>
-    );
-  } else if (page === lastElement) {
-    return (
-      <Pagination>
-        <Page>0</Page>
-        <Page>...</Page>
-        <Page>{page - 1}</Page>
-        <Page>{page}</Page>
-      </Pagination>
-    );
-  } else if (page + 1 === lastElement) {
-    return (
-      <Pagination>
-        <Page>0</Page>
-        <Page>...</Page>
-        <Page>{page - 1}</Page>
-        <Page>{page}</Page>
-        <Page>{lastElement}</Page>
-      </Pagination>
-    );
-  } else if (page + 1 < lastElement && page > 3) {
-    return (
-      <Pagination>
-        <Page>0</Page>
-        <Page>...</Page>
-        <Page>{page - 1}</Page>
-        <Page>{page}</Page>
-        <Page>{page + 1}</Page>
-        <Page>...</Page>
-        <Page>{lastElement}</Page>
-      </Pagination>
-    );
-  } else if (page < lastElement) {
-    return (
-      <Pagination>
-        <Page>0</Page>
-        <Page>{page}</Page>
-        <Page>{page + 1}</Page>
-        <Page>...</Page>
-        <Page>{lastElement}</Page>
-      </Pagination>
-    );
-  }
-};
-
-return nfts.length > 0 ? (
+return nfts ? (
   <Container>
     <h1 className="store">{store}</h1>
     <Stats>
-      <Total>
-        <div> Items</div> <div>{nfts.length}</div>
-      </Total>
-      <Total>
-        <div> Total Owners</div> <div>{owners}</div>
-      </Total>
-      <Total>
-        <div> Volume</div> <div>{YoctoToNear(volume.toString())} NEAR</div>
-      </Total>
+      {Object.keys(stats).map((label) => (
+        <Total key={label}>
+          <div> {label}</div> <div>{stats[label]}</div>
+        </Total>
+      ))}
+      <div className="filter">
+        <Widget
+          src="near/widget/DIG.DropdownMenu"
+          props={{
+            items: filterItems,
+            trigger: (
+              <Trigger>
+                {filter}
+                <img
+                  src="https://ipfs.near.social/ipfs/bafkreib55nddf64vsdxlhms5xpe6uirgizr2jbxbjecafcp3ehwqmaswd4"
+                  alt="arrow"
+                />
+              </Trigger>
+            ),
+          }}
+        />
+      </div>
     </Stats>
-    <div className="d-flex gap-4 flex-wrap">
+    <div className="card-wrapper">
+      {nfts.length === 0 && (
+        <p
+          style={{
+            margin: "auto",
+            paddingTop: "1rem",
+            fontSize: "20px",
+            fontWeight: "bold",
+          }}
+        >
+          No Owned NFTs
+        </p>
+      )}
       {nfts.slice(page * perPage, (page + 1) * perPage).map((nft) => {
         let priceYocto = nft.listings[0].price;
         if (priceYocto) {
@@ -312,7 +318,7 @@ return nfts.length > 0 ? (
         }
         const priceNear = YoctoToNear(priceYocto);
         return (
-          <div className="d-flex flex-column wrap gap-1 w-15 p-3">
+          <div className="d-flex flex-column between wrap gap-1 w-15 p-3">
             <NFTcard
               href={`https://mintbase.xyz/meta/${nft.metadata_id.replace(
                 ":",
@@ -353,7 +359,15 @@ return nfts.length > 0 ? (
         );
       })}
     </div>
-    {<PaginationNumber />}
+    <Widget
+      src="baam25.near/widget/pagination"
+      props={{
+        onClick: (page) => setPage(page),
+        data: nfts,
+        page: page,
+        perPage: perPage,
+      }}
+    />
   </Container>
 ) : (
   <p>loading...</p>

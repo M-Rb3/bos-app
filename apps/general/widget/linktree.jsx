@@ -149,6 +149,7 @@ return (
               src="near/widget/Tags"
               props={{
                 tags: LinktreeSDK.account.tags,
+                data: nfts,
               }}
             />
           </Theme.TagsSection>
