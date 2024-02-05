@@ -84,6 +84,7 @@ const perPage = 9;
 // list of pages
 const paginations = [...Array(parseInt(nfts?.length / perPage) + 1).keys()];
 +(nfts?.length % perPage > 0 ? 1 : 0);
+
 let lastElement = paginations[paginations.length - 1];
 const handlePainate = (to) => {
   if (to !== "...") {
@@ -100,7 +101,7 @@ const Page = ({ children }) => {
     </div>
   );
 };
-const Number = () => {
+const PagNumber = () => {
   if (paginations.length < 4) {
     return (
       <Pagination>
@@ -166,13 +167,7 @@ return (
   <Wrapper>
     <Contaienr>
       {nfts?.slice(page * perPage, (page + 1) * perPage)?.map((nft) => (
-        <div
-          key={nft.tokenId}
-          className={`${
-            selectedNft?.tokenId === nft.tokenId ? "selected" : ""
-          }`}
-          onClick={() => updateState({ selectedNft: nft })}
-        >
+        <div key={nft.tokenId}>
           <Widget
             src="mob.near/widget/NftImage"
             props={{
@@ -197,6 +192,6 @@ return (
         </div>
       ))}
     </Contaienr>
-    <Number />
+    <PagNumber />
   </Wrapper>
 );
