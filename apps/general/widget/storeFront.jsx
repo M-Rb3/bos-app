@@ -1,6 +1,9 @@
 const accountId = props.accountId || context.accountId;
 const store = props.store;
 const customStyle = props.customStyle || "";
+const description = props.description || "";
+const showHeader = props.showHeader || true;
+const Header = props.Header;
 // Paginaton
 const perPage = props.perPage || 48;
 const AFFILIATE_ACCOUNT = props.affiliateAccount || "baam25.near";
@@ -10,6 +13,14 @@ if (!store) return "pass storeId";
 const [page, setPage] = useState(0);
 const [filter, setFilter] = useState("Filter");
 
+const YoctoToNear = (amountYocto) => {
+  return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
+};
+const _price = (nft) => {
+  if (nft) {
+    return nft.listings[0]?.price;
+  }
+};
 const data = fetch("https://graph.mintbase.xyz", {
   method: "POST",
   headers: {
@@ -27,7 +38,7 @@ const data = fetch("https://graph.mintbase.xyz", {
         owner
         media
         metadata_id
-        listings {
+        listings(where: {unlisted_at: {_is_null: true}, accepted_at: {_is_null: true}}) {
           price
         }
       }
@@ -39,10 +50,10 @@ const data = fetch("https://graph.mintbase.xyz", {
           count(distinct: true)
         }
       }
-      nft_earnings(where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}) {
+      nft_earnings(where: {nft_contract_id: {_eq: "${store}"}}) {
         amount
       }
-      nft_activities(where: {nft_contract_id: {_eq: "mint.yearofchef.near"}}) {
+      nft_activities(where: {nft_contract_id: {_eq: "${store}"}}) {
         kind
         price
         action_receiver
@@ -62,10 +73,24 @@ const nft_activities = data?.body?.data?.nft_activities;
 const owners =
   data?.body?.data?.mb_views_nft_owned_tokens_aggregate?.aggregate.count;
 
-const YoctoToNear = (amountYocto) => {
-  return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
-};
-console.log(nfts);
+let floorPrice = 0;
+if (nfts.length) {
+  const lowestPrice = nfts.reduce((minObj, obj) => {
+    const currentPrice = _price(obj);
+    const minObjPrice = _price(minObj);
+    // Exclude null and undefined values
+    if (currentPrice != null && currentPrice !== undefined) {
+      // If minObj is null or currentPrice is lower than minObj.price, update minObj
+      if (minObj === null || currentPrice < minObjPrice) {
+        return obj;
+      }
+    }
+    // Otherwise, keep minObj unchanged
+    return minObj;
+  }, null);
+  floorPrice = YoctoToNear(_price(lowestPrice).toString()) + " NEAR";
+}
+
 // Filter
 switch (filter) {
   case "name":
@@ -248,7 +273,8 @@ const Trigger = styled.div`
 const stats = {
   Items: nfts.length,
   "Total Owners": owners,
-  Volume: YoctoToNear(volume.toString()) + "NEAR",
+  "Floor Price": floorPrice,
+  Volume: YoctoToNear(volume.toString()) + " NEAR",
 };
 const filterItems = [
   {
@@ -270,7 +296,8 @@ const filterItems = [
 ];
 return nfts ? (
   <Container>
-    <h1 className="store">{store}</h1>
+    {showHeader && (Header ?? <h1 className="store">{store}</h1>)}
+    {description && description}
     <Stats>
       {Object.keys(stats).map((label) => (
         <Total key={label}>
@@ -309,7 +336,7 @@ return nfts ? (
         </p>
       )}
       {nfts.slice(page * perPage, (page + 1) * perPage).map((nft) => {
-        let priceYocto = nft.listings[0].price;
+        let priceYocto = _price(nft);
         if (priceYocto) {
           priceYocto = priceYocto
             .toLocaleString()
