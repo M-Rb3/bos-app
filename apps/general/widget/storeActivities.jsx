@@ -1,29 +1,38 @@
-const contractId = props.contractId || "mint.yearofchef.near";
+const contractId = props.contractId;
 const cursomStyle = props.cursomStyle || "";
-const perPage = props.contractId || 100;
+const perPage = props.perPage || 50; // need to be less than 50
+const color = props.color || "#000000";
+
+if (!contractId) return "pass a contractId";
 
 const nearLogo =
   "https://ipfs.near.social/ipfs/bafkreib2cfbayerbbnoya6z4qcywnizqrbkzt5lbqe32whm2lubw3sywr4";
 const [page, setPage] = useState(0);
 
-const _address = (address) => {
-  if (address.length > 20) return address.slice(0, 20) + "...";
+const _address = (address, _limit) => {
+  const limit = _limit || 20;
+  if (address.length > limit) return address.slice(0, 10) + "...";
   else return address;
 };
 const YoctoToNear = (amountYocto) => {
   return new Big(amountYocto || 0).div(new Big(10).pow(24)).toString();
 };
-const utcDate2 = new Date(Date.UTC(0, 0, 0, 0, 0, 0));
+const utcDate2 = new Date();
+
+// Get the current date in the local time zone
+const currentDate = new Date();
+
+// Calculate the time zone offset in milliseconds
+let localTimeZoneOffsetMinutes = currentDate.getTimezoneOffset();
+localTimeZoneOffsetMinutes = localTimeZoneOffsetMinutes * 60 * 1000;
 
 const currentTimestamp = new Date().getTime();
-console.log("currentTimestamp", currentTimestamp);
-
-const getTimePassed = (timestamp) => {
+const getTimePassed = (date) => {
   // Get the current timestamp in milliseconds
+  const timestamp = new Date(date).getTime();
 
-  console.log(currentTimestamp);
   // Calculate the difference in milliseconds
-  const timePassed = currentTimestamp - timestamp;
+  const timePassed = currentTimestamp + localTimeZoneOffsetMinutes - timestamp;
 
   // Convert milliseconds to seconds, minutes, hours, etc.
   const secondsPassed = Math.floor(timePassed / 1000);
@@ -54,26 +63,31 @@ const data = fetch("https://graph.mintbase.xyz", {
   },
   body: JSON.stringify({
     query: `query MyQuery {
-        nft_activities(
-            where: {nft_contract_id: {_eq: "${contractId}"}}
-            order_by: {timestamp: desc}
-          ) {
-            kind
-            price
-            action_receiver
-            action_sender
-            timestamp
-            token_id
-            receipt_id
-          }
+      mb_views_nft_activities(
+        where: {nft_contract_id: {_eq:"${contractId}"}}
+        order_by: {timestamp: desc}
+      ) {
+        action_receiver
+        action_sender
+        price
+        receipt_id
+        title
+        timestamp
+        media
+        kind
+        metadata_id
+        tx_sender
+        token_id
+      }
     }
   `,
   }),
 });
-const nft_activities = data?.body?.data?.nft_activities;
+const nft_activities = data?.body?.data?.mb_views_nft_activities;
 if (!nft_activities) return "Loading ...";
 
 const Container = styled.div`
+  --primary-color: ${color};
   display: flex;
   flex-direction: column;
   overflow-x: scroll;
@@ -84,10 +98,10 @@ const Container = styled.div`
     justify-content: space-between;
     padding: 1rem 0;
     gap: 1rem;
-    background: black;
+    background: var(--primary-color);
     color: white;
     margin-bottom: 1rem;
-    > div {
+    div {
       text-align: center;
     }
     ${cursomStyle}
@@ -99,13 +113,55 @@ const Container = styled.div`
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 0;
-    border-bottom: 1px solid #0000005a;
+    border-bottom: 1px solid ${color}5a;
     &:last-of-type {
       border-bottom-color: transparent;
     }
-    > div {
+    div,
+    a,
+    span {
       text-align: center;
       margin: auto;
+    }
+    .address {
+      color: ${color};
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border-radius: 2px;
+      transition: all 200ms;
+      :hover {
+        background: ${color};
+        color: white;
+      }
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      gap: 10px;
+      div {
+        white-space: nowrap;
+        color: ${color};
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        border-radius: 2px;
+        transition: all 200ms;
+        :hover {
+          background: ${color};
+          color: white;
+        }
+      }
+      img {
+        object-fit: cover;
+        width: 40px;
+        height: 40px;
+      }
     }
     .kind {
       width: fit-content;
@@ -126,6 +182,23 @@ const Container = styled.div`
         width: 14px;
       }
     }
+    .time {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      svg {
+        box-sizing: content-box;
+        height: 14px;
+        cursor: pointer;
+        padding: 10px;
+        border-radius: 2px;
+        transition: all 200ms ease 0s;
+        :hover {
+          fill: white;
+          background: ${color};
+        }
+      }
+    }
   }
 `;
 const Trx = styled.div``;
@@ -137,14 +210,22 @@ const kindColor = {
   make_offer: "#4f58a3",
   mint: "#000000",
 };
-
-console.log(nft_activities.slice(page * perPage, (page + 1) * perPage));
-
+// const hanldeRoute = (receipt) => {
+//   asyncFetch("https://api.nearblocks.io/v1/search?keyword=" + receipt).then(
+//     (data) => {
+//       const txnHash =
+//         "https://nearblocks.io/txns/" +
+//         data.body.receipts[0]?.originated_from_transaction_hash;
+//       console.log(txnHash);
+//       clipboard.writeText(txnHash);
+//     }
+//   );
+// };
 return (
   <Container>
     <div className="header">
       <div>Event</div>
-      <div>Token Id</div>
+      <div>NFT</div>
       <div>From</div>
       <div>To</div>
       <div> Price</div>
@@ -153,49 +234,123 @@ return (
     <div>
       {nft_activities
         .slice(page * perPage, (page + 1) * perPage)
-        .map((activity) => (
-          <div className="trx-row" key={activity.receipt_id}>
-            <div
-              style={{
-                background: kindColor[activity.kind] + "40",
-                color: kindColor[activity.kind],
-              }}
-              className="kind"
-            >
-              {activity.kind}
+        .map((activity) => {
+          const hashData = fetch(
+            "https://api.nearblocks.io/v1/search?keyword=" + activity.receipt_id
+          );
+          return (
+            <div className="trx-row" key={activity.receipt_id}>
+              <div
+                style={{
+                  background: kindColor[activity.kind] + "40",
+                  color: kindColor[activity.kind],
+                }}
+                className="kind"
+              >
+                {activity.kind}
+              </div>
+              <a
+                href={`https://mintbase.xyz/meta/${activity.metadata_id.replace(
+                  ":",
+                  "%3A"
+                )}`}
+                target="_blank"
+                className="title"
+              >
+                {" "}
+                <img
+                  src={
+                    "https://image-cache-service-z3w7d7dnea-ew.a.run.app/media?url=" +
+                    activity.media
+                  }
+                  alt={activity.token_id}
+                />
+                <div>{activity.token_id}</div>
+              </a>
+              <Widget
+                src="near/widget/AccountProfileOverlay"
+                props={{
+                  accountId: activity.action_sender,
+                  children: (
+                    <a
+                      href={
+                        "https://near.org/near/widget/ProfilePage?accountId=" +
+                        activity.action_sender
+                      }
+                      className="address"
+                      target="_blank"
+                    >
+                      {_address(activity.action_sender)}{" "}
+                    </a>
+                  ),
+                }}
+              />
+              <Widget
+                src="near/widget/AccountProfileOverlay"
+                props={{
+                  accountId: activity.action_receiver,
+                  children: (
+                    <a
+                      href={
+                        "https://near.org/near/widget/ProfilePage?accountId=" +
+                        activity.action_receiver
+                      }
+                      className="address"
+                      target="_blank"
+                    >
+                      {_address(activity.action_receiver)}{" "}
+                    </a>
+                  ),
+                }}
+              />
+
+              <div>
+                {" "}
+                {activity.price ? (
+                  <div className="price">
+                    {YoctoToNear(activity.price)}
+                    <img src={nearLogo} alt="NEAR" />
+                  </div>
+                ) : (
+                  "-"
+                )}{" "}
+              </div>
+              <div className="time">
+                {" "}
+                {getTimePassed(activity.timestamp)} ago{" "}
+                {hashData.body.receipts[0]
+                  ?.originated_from_transaction_hash && (
+                  <a
+                    href={
+                      "https://nearblocks.io/txns/" +
+                      hashData.body.receipts[0]
+                        ?.originated_from_transaction_hash
+                    }
+                    target="_blank"
+                  >
+                    <svg
+                      viewBox="0 0 512 512"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="m432 320h-32a16 16 0 0 0 -16 16v112h-320v-320h144a16 16 0 0 0 16-16v-32a16 16 0 0 0 -16-16h-160a48 48 0 0 0 -48 48v352a48 48 0 0 0 48 48h352a48 48 0 0 0 48-48v-128a16 16 0 0 0 -16-16zm56-320h-128c-21.37 0-32.05 25.91-17 41l35.73 35.73-243.73 243.64a24 24 0 0 0 0 34l22.67 22.63a24 24 0 0 0 34 0l243.61-243.68 35.72 35.68c15 15 41 4.5 41-17v-128a24 24 0 0 0 -24-24z" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             </div>
-            <div> {activity.token_id} </div>
-            <div> {_address(activity.action_sender)} </div>
-            <div> {_address(activity.action_receiver)} </div>
-            <div>
-              {" "}
-              {activity.price ? (
-                <div className="price">
-                  {YoctoToNear(activity.price)}
-                  <img src={nearLogo} alt="NEAR" />
-                </div>
-              ) : (
-                "-"
-              )}{" "}
-            </div>
-            <div>
-              {" "}
-              {getTimePassed(new Date(activity.timestamp).getTime())} ago{" "}
-            </div>
-          </div>
-        ))}
+          );
+        })}
     </div>
     <Widget
       src="baam25.near/widget/pagination"
       props={{
         onClick: (page) => {
-          console.log(page);
-          console.log(setPage);
           setPage(page);
         },
         data: nft_activities,
         page: page,
         perPage: perPage,
+        bgColor: color,
       }}
     />
   </Container>

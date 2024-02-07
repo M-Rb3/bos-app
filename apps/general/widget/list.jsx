@@ -116,7 +116,7 @@ const data = fetch("https://graph.mintbase.xyz", {
 });
 
 const nfts = data.body?.data?.mb_views_nft_owned_tokens;
-
+if (nfts === null) return "loading";
 const defaultGas = 1e14; // 100 tGas
 const defaultDeposit = 1e22; // 0.01 near
 const storageDeposit = (contractName, gas, deposit) => ({

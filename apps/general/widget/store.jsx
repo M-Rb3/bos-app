@@ -2,11 +2,14 @@ const accountId = props.accountId || context.accountId;
 const store = props.store;
 const customStyle = props.customStyle || "";
 const description = props.description || "";
-const showHeader = props.showHeader || true;
+const showHeader = props.showHeader === null ? true : props.showHeader;
 const header = props.header;
 // Paginaton
 const perPage = props.perPage || 48;
 const AFFILIATE_ACCOUNT = props.affiliateAccount || "baam25.near";
+
+const nearLogo =
+  "https://ipfs.near.social/ipfs/bafkreib2cfbayerbbnoya6z4qcywnizqrbkzt5lbqe32whm2lubw3sywr4";
 
 if (!store) return "pass storeId";
 
@@ -21,6 +24,12 @@ const _price = (nft) => {
     return nft.listings[0]?.price;
   }
 };
+const _address = (address, _limit) => {
+  const limit = _limit || 20;
+  if (address.length > limit) return address.slice(0, 10) + "...";
+  else return address;
+};
+
 const data = fetch("https://graph.mintbase.xyz", {
   method: "POST",
   headers: {
@@ -78,7 +87,7 @@ if (nfts.length) {
     // Otherwise, keep minObj unchanged
     return minObj;
   }, null);
-  floorPrice = YoctoToNear(_price(lowestPrice).toString()) + " NEAR";
+  floorPrice = YoctoToNear(_price(lowestPrice).toString());
 }
 
 const sortByName = () => {
@@ -213,11 +222,7 @@ const NFTcard = styled.a`
   .tilte {
     color: black;
   }
-  .owner {
-    color: var(--primary-color);
-    font-size: 12px;
-    font-weight: 500;
-  }
+
   .listed {
     font-size: 10px;
     color: #6c757d;
@@ -274,11 +279,35 @@ const Trigger = styled.div`
     width: 12px;
   }
 `;
+const Owner = styled.a`
+  color: var(--primary-color) !important;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+`;
+const Price = styled.div`
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: 600;
+  justify-content: center;
+  img {
+    width: 14px;
+  }
+`;
 const stats = {
   Items: nfts.length,
   "Total Owners": owners,
-  "Floor Price": floorPrice,
-  Volume: YoctoToNear(volume.toString()) + " NEAR",
+  "Floor Price": (
+    <Price>
+      {floorPrice} <img src={nearLogo} alt="near-logo" />
+    </Price>
+  ),
+  Volume: (
+    <Price>
+      {YoctoToNear(volume.toString())} <img src={nearLogo} alt="near-logo" />
+    </Price>
+  ),
 };
 const filterItems = [
   {
@@ -367,9 +396,24 @@ return (
               <div className="desc">
                 <div className="tilte">{nft.title}</div>
                 <div className="owner">
-                  {nft.owner.length > 20
-                    ? nft.owner.slice(0, 7) + "...."
-                    : nft.owner}
+                  <Widget
+                    src="near/widget/AccountProfileOverlay"
+                    props={{
+                      accountId: nft.owner,
+                      children: (
+                        <Owner
+                          href={
+                            "https://near.org/near/widget/ProfilePage?accountId=" +
+                            nft.owner
+                          }
+                          className="address"
+                          target="_blank"
+                        >
+                          {_address(nft.owner)}{" "}
+                        </Owner>
+                      ),
+                    }}
+                  />
                 </div>
                 {!priceYocto && <div className="listed">not listed</div>}
                 {priceYocto && (
@@ -397,6 +441,7 @@ return (
         data: nfts,
         page: page,
         perPage: perPage,
+        bgColor: "var(--primary-color)",
       }}
     />
   </Container>

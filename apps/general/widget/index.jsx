@@ -1,5 +1,5 @@
 const [state, setState] = useState({
-  currentTab: "list",
+  currentTab: "explore",
 });
 
 const { currentTab } = state;
@@ -61,6 +61,7 @@ const Container = styled.div`
     display: flex;
     gap: 1rem;
     margin-left: 1rem;
+    margin-bottom: 2rem;
   }
 `;
 const Header = styled.div`
@@ -82,7 +83,48 @@ const bgIocns = [
   "bafkreihutrcg7fvrcwq47yzg3kinnnl5bqzo7on7rrrb37xejojjx3vrya",
   "bafkreihlclbgvfhugq4y2gso2knpd6iiedyshc2lmn2eub3wwlmg77ah4e",
 ];
-const tabs = ["list", "explore"];
+const tabs = ["list", "explore", "activity"];
+
+const customStyle = `
+--primary-color:#ec2109;
+--primary-light: #890e3334;
+`;
+const donorAddress = "donors.yearofchef.near";
+const cooksAddress = "cooks.yearofchef.near";
+const menuAddress = "menu.yearofchef.near";
+const ogAddress = "og.yearofchef.near";
+const cooksLeft = Near.view("mint.yearofchef.near", "nft_supply_for_owner", {
+  account_id: cooksAddress,
+});
+const ogLeft = Near.view("mint.yearofchef.near", "nft_supply_for_owner", {
+  account_id: ogAddress,
+});
+const menuLeft = Near.view("mint.yearofchef.near", "nft_supply_for_owner", {
+  account_id: menuAddress,
+});
+const donorsLeft = Near.view("mint.yearofchef.near", "nft_supply_for_owner", {
+  account_id: donorAddress,
+});
+const leftItems = [
+  { address: donorAddress, left: donorsLeft, total: "1230" },
+  { address: menuAddress, left: menuLeft, total: "400" },
+  { address: ogAddress, left: ogLeft, total: "180" },
+  { address: cooksAddress, left: cooksLeft, total: "204" },
+];
+const OwnersCount = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  .item {
+    display: flex;
+    gap: 1rem;
+    .number span {
+      color: #ec2109;
+    }
+  }
+`;
+
 return (
   <Container>
     <Header>
@@ -92,6 +134,16 @@ return (
         supporters on 🫕 Potlock where royalties are auto-redistributed to
         approved public goods on the registry.
       </div>
+      <OwnersCount>
+        {leftItems.map((item) => (
+          <div key={item.address} className="item">
+            <div className="address">{item.address}</div>
+            <div className="number">
+              <span> {item.left}</span> / {item.total}
+            </div>
+          </div>
+        ))}
+      </OwnersCount>
       <div className="tabs">
         {tabs.map((tab) => (
           <div
@@ -113,7 +165,23 @@ return (
     </Header>
     {currentTab === "list" && <Widget src="bos.yearofchef.near/widget/list" />}
     {currentTab === "explore" && (
-      <Widget src="bos.yearofchef.near/widget/explore" />
+      <Widget
+        src="baam25.near/widget/store"
+        props={{
+          store: "mint.yearofchef.near",
+          showHeader: false,
+          customStyle,
+        }}
+      />
+    )}
+    {currentTab === "activity" && (
+      <Widget
+        src="baam25.near/widget/storeActivities"
+        props={{
+          contractId: "mint.yearofchef.near",
+          color: "#ec2109",
+        }}
+      />
     )}
   </Container>
 );
