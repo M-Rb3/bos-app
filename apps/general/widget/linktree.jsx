@@ -5,6 +5,28 @@ const accountId = loggedIn
   ? context.accountId ?? "baam25.near"
   : props.accountId ?? "baam25.near";
 const viewingOwnAccount = accountId === context.accountId;
+const showNFTs = props.showNFTs
+  ? typeof props.showNFTs === "string"
+    ? JSON.parse(props.showNFTs)
+    : props.showNFTs
+  : true;
+const isLink = props.isLink
+  ? typeof props.isLink === "string"
+    ? JSON.parse(props.isLink)
+    : props.isLink
+  : true;
+const showTags = props.showTags
+  ? typeof props.showTags === "string"
+    ? JSON.parse(props.showTags)
+    : props.showTags
+  : true;
+
+const customExternalLinks = props.customExternalLinks || [
+  "website",
+  "github",
+  "twitter",
+  "telegram",
+]; // ex: ["telegram"] only shows telegram
 
 const AVAILABLE_THEMES = {
   default: "Default",
@@ -25,7 +47,7 @@ const themeName =
 const Theme = VM.require(`mattb.near/widget/Linktree.Themes.${themeName}`);
 
 const LinktreeSDK = VM.require("mattb.near/widget/Linktree.Utils.SDK");
-
+if (!LinktreeSDK) return "Loading...";
 // Load profile data
 LinktreeSDK.load(accountId);
 
@@ -48,11 +70,13 @@ const data = fetch("https://graph.mintbase.xyz", {
       tokenId: token_id
       contractId: nft_contract_id
       media
+      metadata_id
     }}
 `,
   }),
 });
 const nfts = data.body?.data?.tokens;
+console.log(nfts);
 const Gallery = styled.div`
   max-width: 1000px;
   display: flex;
@@ -117,7 +141,28 @@ const HandleDownSlide = () => {
   }
 };
 
-console.log(window);
+const externalLinks = {
+  website: {
+    icon: <i className="bi bi-globe"></i>,
+    label: "Website",
+    url: `https://${LinktreeSDK.account.data.linktree.website}`,
+  },
+  twitter: {
+    icon: <i className="bi bi-twitter"></i>,
+    label: "Twitter",
+    url: `https://twitter.com/${LinktreeSDK.account.data.linktree.twitter}`,
+  },
+  telegram: {
+    icon: <i className="bi bi-telegram"></i>,
+    label: "Telegram",
+    url: `https://t.me/${LinktreeSDK.account.data.linktree.telegram}`,
+  },
+  github: {
+    icon: <i className="bi bi-github"></i>,
+    label: "Github",
+    url: `https://github.com/${LinktreeSDK.account.data.linktree.github}`,
+  },
+};
 return (
   <>
     <Theme.Linktree>
@@ -143,7 +188,7 @@ return (
         <h2>{LinktreeSDK.account.data.name || accountId}</h2>
 
         <h5>@{accountId}</h5>
-        {LinktreeSDK.account.tags.length > 0 && (
+        {LinktreeSDK.account.tags.length > 0 && showTags && (
           <Theme.TagsSection>
             <Widget
               src="near/widget/Tags"
@@ -157,102 +202,84 @@ return (
       </Theme.Details>
       {LinktreeSDK.account.data.linktree && (
         <Theme.LinktreeLinks>
-          {LinktreeSDK.account.data.linktree.website && (
-            <a
-              href={`https://${LinktreeSDK.account.data.linktree.website}`}
-              target="_blank"
-            >
-              <button style={{ width: "100%" }}>
-                {" "}
-                <i className="bi bi-globe"></i> Website
-              </button>
-            </a>
-          )}
-
-          {LinktreeSDK.account.data.linktree.github && (
-            <>
-              <a
-                href={`https://github.com/${LinktreeSDK.account.data.linktree.github}`}
-                target="_blank"
-              >
-                <button style={{ width: "100%" }}>
-                  <i className="bi bi-github"></i> Github
-                </button>
-              </a>
-            </>
-          )}
-
-          {LinktreeSDK.account.data.linktree.twitter && (
-            <a
-              href={`https://twitter.com/${LinktreeSDK.account.data.linktree.twitter}`}
-              target="_blank"
-            >
-              <button style={{ width: "100%" }}>
-                <i className="bi bi-twitter"></i> Twitter
-              </button>
-            </a>
-          )}
-
-          {LinktreeSDK.account.data.linktree.telegram && (
-            <a
-              href={`https://t.me/${LinktreeSDK.account.data.linktree.telegram}`}
-              target="_blank"
-            >
-              <button style={{ width: "100%" }}>
-                <i className="bi bi-telegram"></i> Telegram
-              </button>
-            </a>
-          )}
+          {customExternalLinks.map((link) => {
+            const linkObj = externalLinks[link];
+            if (LinktreeSDK.account.data.linktree[link]) {
+              return (
+                <a href={linkObj.url} target="_blank">
+                  <button style={{ width: "100%" }}>
+                    {" "}
+                    {linkObj.icon} {linkObj.label}
+                  </button>
+                </a>
+              );
+            }
+          })}
         </Theme.LinktreeLinks>
       )}
-      <Gallery>
-        <img
-          src="https://ipfs.near.social/ipfs/bafkreiayzzl6o7cgvrv6dvlwi4kahvjojbldljs24ktw7jmidwlpxjziym"
-          className="arrow-l"
-          onClick={HandleDownSlide}
-          alt="angle left"
-        />
-        <div className="slider-display">
-          <div
-            className="slider-track"
-            style={{
-              transform: `translateX(-${17 * page}rem)`,
-            }}
-          >
-            {nfts?.map((nft) => (
-              <div key={nft.tokenId} className="nft-card">
-                <Widget
-                  src="mob.near/widget/NftImage"
-                  props={{
-                    nft: { tokenId: nft.tokenId, contractId: nft.contractId },
-                    style: {
-                      width: size,
-                      height: size,
-                      objectFit: "cover",
-                      minWidth: size,
-                      minHeight: size,
-                      maxWidth: size,
-                      maxHeight: size,
-                      overflowWrap: "break-word",
-                      borderRadius: "inherit",
-                    },
-                    className: "",
-                    fallbackUrl:
-                      "https://ipfs.near.social/ipfs/bafkreihdiy3ec4epkkx7wc4wevssruen6b7f3oep5ylicnpnyyqzayvcry",
-                    alt: `NFT ${nft.contractId} ${nft.tokenId}`,
-                  }}
-                />
-              </div>
-            ))}
+      {nfts?.length > 0 && showNFTs && (
+        <Gallery>
+          <img
+            src="https://ipfs.near.social/ipfs/bafkreiayzzl6o7cgvrv6dvlwi4kahvjojbldljs24ktw7jmidwlpxjziym"
+            className="arrow-l"
+            onClick={HandleDownSlide}
+            alt="angle left"
+          />
+          <div className="slider-display">
+            <div
+              className="slider-track"
+              style={{
+                transform: `translateX(-${17 * page}rem)`,
+              }}
+            >
+              {nfts.map((nft) => (
+                <a
+                  key={nft.tokenId}
+                  onClick={(event) => (!isLink ? event.preventDefault() : "")}
+                  href={
+                    isLink
+                      ? `https://mintbase.xyz/meta/${nft.metadata_id.replace(
+                          ":",
+                          "%3A"
+                        )}`
+                      : ""
+                  }
+                  target="_blank"
+                  className="nft-card"
+                >
+                  <Widget
+                    src="mob.near/widget/NftImage"
+                    props={{
+                      nft: { tokenId: nft.tokenId, contractId: nft.contractId },
+                      style: {
+                        width: size,
+                        height: size,
+                        objectFit: "cover",
+                        minWidth: size,
+                        minHeight: size,
+                        maxWidth: size,
+                        maxHeight: size,
+                        overflowWrap: "break-word",
+                        borderRadius: "inherit",
+                      },
+                      className: "",
+                      fallbackUrl:
+                        "https://ipfs.near.social/ipfs/bafkreihdiy3ec4epkkx7wc4wevssruen6b7f3oep5ylicnpnyyqzayvcry",
+                      alt: `NFT ${nft.contractId} ${nft.tokenId}`,
+                    }}
+                  />
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
-        <img
-          className="arrow-r"
-          onClick={HandleUpSlide}
-          src="https://ipfs.near.social/ipfs/bafkreiayzzl6o7cgvrv6dvlwi4kahvjojbldljs24ktw7jmidwlpxjziym"
-          alt="angle left"
-        />
-      </Gallery>{" "}
+          <img
+            className="arrow-r"
+            onClick={HandleUpSlide}
+            src="https://ipfs.near.social/ipfs/bafkreiayzzl6o7cgvrv6dvlwi4kahvjojbldljs24ktw7jmidwlpxjziym"
+            alt="angle left"
+          />
+        </Gallery>
+      )}
     </Theme.Linktree>
   </>
 );

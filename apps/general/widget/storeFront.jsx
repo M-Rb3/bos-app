@@ -3,7 +3,7 @@ const store = props.store;
 const customStyle = props.customStyle || "";
 const description = props.description || "";
 const showHeader = props.showHeader || true;
-const Header = props.Header;
+const header = props.header;
 // Paginaton
 const perPage = props.perPage || 48;
 const AFFILIATE_ACCOUNT = props.affiliateAccount || "baam25.near";
@@ -53,23 +53,13 @@ const data = fetch("https://graph.mintbase.xyz", {
       nft_earnings(where: {nft_contract_id: {_eq: "${store}"}}) {
         amount
       }
-      nft_activities(where: {nft_contract_id: {_eq: "${store}"}}) {
-        kind
-        price
-        action_receiver
-        action_sender
-        timestamp
-        token_id
-        receipt_id
-      }
     }
   `,
   }),
 });
 let nfts = data?.body?.data?.mb_views_nft_tokens;
-
+if (!nfts) return "Loading";
 const nft_earnings = data?.body?.data?.nft_earnings;
-const nft_activities = data?.body?.data?.nft_activities;
 const owners =
   data?.body?.data?.mb_views_nft_owned_tokens_aggregate?.aggregate.count;
 
@@ -91,12 +81,25 @@ if (nfts.length) {
   floorPrice = YoctoToNear(_price(lowestPrice).toString()) + " NEAR";
 }
 
+const sortByName = () => {
+  nfts.sort((a, b) => {
+    const nameA = a.title; // Ignore case during comparison
+    const nameB = b.title;
+    if (nameA < nameB) {
+      return -1;
+    }
+    if (nameA > nameB) {
+      return 1;
+    }
+    // names must be equal
+    return 0;
+  });
+};
+
 // Filter
 switch (filter) {
-  case "name":
-    nfts.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-    );
+  case "Name":
+    sortByName();
     break;
   case "Price: Low To High":
     nfts.sort((a, b) => {
@@ -125,6 +128,7 @@ switch (filter) {
     nfts = nfts.filter((nft) => nft.owner === accountId);
     break;
   default:
+    sortByName();
     break;
 }
 // GET Volume
@@ -294,9 +298,9 @@ const filterItems = [
     onSelect: () => setFilter("Owned by me"),
   },
 ];
-return nfts ? (
+return (
   <Container>
-    {showHeader && (Header ?? <h1 className="store">{store}</h1>)}
+    {showHeader && (header ?? <h1 className="store">{store}</h1>)}
     {description && description}
     <Stats>
       {Object.keys(stats).map((label) => (
@@ -396,6 +400,4 @@ return nfts ? (
       }}
     />
   </Container>
-) : (
-  <p>loading...</p>
 );
