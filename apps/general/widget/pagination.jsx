@@ -14,7 +14,7 @@ let lastElement = paginations[paginations.length - 1];
 const handlePainate = (to) => {
   if (to !== "...") {
     const nxtPage = parseInt(to);
-    setPage(onClick(nxtPage));
+    onClick(nxtPage);
   }
 };
 const Page = ({ children }) => {
