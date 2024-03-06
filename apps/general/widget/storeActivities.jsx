@@ -210,17 +210,25 @@ const kindColor = {
   make_offer: "#4f58a3",
   mint: "#000000",
 };
-// const hanldeRoute = (receipt) => {
-//   asyncFetch("https://api.nearblocks.io/v1/search?keyword=" + receipt).then(
-//     (data) => {
-//       const txnHash =
-//         "https://nearblocks.io/txns/" +
-//         data.body.receipts[0]?.originated_from_transaction_hash;
-//       console.log(txnHash);
-//       clipboard.writeText(txnHash);
-//     }
-//   );
-// };
+
+const ProfileOverlay = ({ address }) => (
+  <Widget
+    src="near/widget/AccountProfileOverlay"
+    props={{
+      accountId: address,
+      children: (
+        <a
+          href={"https://near.org/near/widget/ProfilePage?accountId=" + address}
+          className="address"
+          target="_blank"
+        >
+          {_address(address)}
+        </a>
+      ),
+    }}
+  />
+);
+
 return (
   <Container>
     <div className="header">
@@ -267,45 +275,11 @@ return (
                 />
                 <div>{activity.token_id}</div>
               </a>
-              <Widget
-                src="near/widget/AccountProfileOverlay"
-                props={{
-                  accountId: activity.action_sender,
-                  children: (
-                    <a
-                      href={
-                        "https://near.org/near/widget/ProfilePage?accountId=" +
-                        activity.action_sender
-                      }
-                      className="address"
-                      target="_blank"
-                    >
-                      {_address(activity.action_sender)}{" "}
-                    </a>
-                  ),
-                }}
-              />
-              <Widget
-                src="near/widget/AccountProfileOverlay"
-                props={{
-                  accountId: activity.action_receiver,
-                  children: (
-                    <a
-                      href={
-                        "https://near.org/near/widget/ProfilePage?accountId=" +
-                        activity.action_receiver
-                      }
-                      className="address"
-                      target="_blank"
-                    >
-                      {_address(activity.action_receiver)}{" "}
-                    </a>
-                  ),
-                }}
-              />
+              <ProfileOverlay address={activity.action_sender} />
+
+              <ProfileOverlay address={activity.action_receiver} />
 
               <div>
-                {" "}
                 {activity.price ? (
                   <div className="price">
                     {YoctoToNear(activity.price)}

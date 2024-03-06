@@ -41,8 +41,9 @@ const Pagination = styled.div`
     font-size: 12px;
     color: white;
     cursor: pointer;
+    transition: all 300ms;
     :hover {
-      opacity: 0.7;
+      opacity: 0.75;
     }
     &.active {
       background: white;
@@ -113,4 +114,4 @@ const PaginationNumber = () => {
   }
 };
 
-return <PaginationNumber />;
+return paginations.length === 1 ? "" : <PaginationNumber />;

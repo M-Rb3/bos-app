@@ -181,6 +181,9 @@ const Container = styled.div`
     flex-wrap: wrap;
     gap: 1.5rem;
     justify-content: space-between;
+    @media only screen and (max-width: 480px) {
+      justify-content: center;
+    }
   }
   ${customStyle}
 `;
@@ -238,12 +241,16 @@ const NFTcard = styled.a`
 
 const Stats = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
   .filter {
     margin-left: auto;
     position: relative;
+    @media only screen and (max-width: 480px) {
+      width: 100%;
+    }
   }
 `;
 const Total = styled.div`
@@ -327,6 +334,25 @@ const filterItems = [
     onSelect: () => setFilter("Owned by me"),
   },
 ];
+
+const ProfileOverlay = ({ owner }) => (
+  <Widget
+    src="near/widget/AccountProfileOverlay"
+    props={{
+      accountId: owner,
+      children: (
+        <Owner
+          href={"https://near.org/near/widget/ProfilePage?accountId=" + owner}
+          className="address"
+          target="_blank"
+        >
+          {_address(owner)}{" "}
+        </Owner>
+      ),
+    }}
+  />
+);
+
 return (
   <Container>
     {showHeader && (header ?? <h1 className="store">{store}</h1>)}
@@ -396,24 +422,7 @@ return (
               <div className="desc">
                 <div className="tilte">{nft.title}</div>
                 <div className="owner">
-                  <Widget
-                    src="near/widget/AccountProfileOverlay"
-                    props={{
-                      accountId: nft.owner,
-                      children: (
-                        <Owner
-                          href={
-                            "https://near.org/near/widget/ProfilePage?accountId=" +
-                            nft.owner
-                          }
-                          className="address"
-                          target="_blank"
-                        >
-                          {_address(nft.owner)}{" "}
-                        </Owner>
-                      ),
-                    }}
-                  />
+                  <ProfileOverlay owner={nft.owner} />
                 </div>
                 {!priceYocto && <div className="listed">not listed</div>}
                 {priceYocto && (
