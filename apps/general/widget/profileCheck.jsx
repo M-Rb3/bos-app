@@ -1,6 +1,6 @@
 const accountId = context.accountId;
 const sybilProvider = props.sybilProvider;
-const contract = "social-provider.tests.potlock.near";
+const contract = "v1.socialcheck.near";
 if (!accountId) {
   return "Please sign in with NEAR wallet to edit your profile";
 }
@@ -181,11 +181,9 @@ const completedCheckMsg = (
     app to verify
   </div>
 );
-const isCheckComplete = Near.view(
-  contract,
-  "has_complete_social_profile_check",
-  { account_id: accountId }
-);
+const isCheckComplete = Near.view(contract, "has_complete_profile_check", {
+  account_id: accountId,
+});
 useEffect(() => {
   if (isCheckComplete === null) return;
   else if (isCheckComplete) return setPrompt(completedCheckMsg);
